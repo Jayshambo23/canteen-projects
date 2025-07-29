@@ -16,35 +16,52 @@ struct Item {
     int quantity;
 };
 
-// Inventory Array
 struct Item inventory[100] = {
     {1, "Pizza", 250.0, 10},
     {2, "Chowmein", 120.0, 15},
     {3, "Momo", 150.0, 20},
     {4, "Samosa", 30.0, 40}
 };
+
 int itemCount = 4;
 
+void loadInventoryFromFile() {
+    FILE *fp = fopen("inventory.txt", "r");
+    if (fp == NULL)
+        return;
+
+    itemCount = 0;
+    while (fscanf(fp, "%d %f %d\n", &inventory[itemCount].id, inventory[itemCount].name, &inventory[itemCount].price, &inventory[itemCount].quantity) == 4) {
+        itemCount++;
+    }
+    fclose(fp);
+}
+
+void saveInventoryToFile() {
+    FILE *fp = fopen("inventory.txt", "w");
+    if (fp == NULL) {
+        printf("Failed to open file to save inventory.\n");
+        return;
+    }
+    for (int i = 0; i < itemCount; i++) {
+        fprintf(fp, "%d\t%s\t%.2f\t%d\n", inventory[i].id, inventory[i].name, inventory[i].price, inventory[i].quantity);
+    }
+    fclose(fp);
+}
+
 int isStrongPassword(struct admin a1) {
-    int i;
     char *password = a1.password;
     int length = strlen(password);
     int hasUpper = 0, hasLower = 0, hasDigit = 0, hasSymbol = 0;
 
-    if (length < 8)
-        return 0;
+    if (length < 8) return 0;
 
-    for (i = 0; i < length; i++) {
-        if (isupper(password[i]))
-            hasUpper = 1;
-        else if (islower(password[i]))
-            hasLower = 1;
-        else if (isdigit(password[i]))
-            hasDigit = 1;
-        else
-            hasSymbol = 1;
+    for (int i = 0; i < length; i++) {
+        if (isupper(password[i])) hasUpper = 1;
+        else if (islower(password[i])) hasLower = 1;
+        else if (isdigit(password[i])) hasDigit = 1;
+        else hasSymbol = 1;
     }
-
     return hasUpper && hasLower && hasDigit && hasSymbol;
 }
 
@@ -67,10 +84,15 @@ void showInventory() {
     }
 }
 
-// ORDER FUNCTION FOR CUSTOMER
 void placeOrder() {
     int id, qty, found;
     float totalAmount = 0.0;
+    char customerName[100];
+
+    printf("Enter your name: ");
+    getchar();
+    fgets(customerName, sizeof(customerName), stdin);
+    customerName[strcspn(customerName, "\n")] = '\0';
 
     struct {
         char name[50];
@@ -84,10 +106,7 @@ void placeOrder() {
         found = 0;
         printf("\nEnter item ID (0 to finish): ");
         scanf("%d", &id);
-
-        if (id == 0) {
-            break;//0 type garne bitikoi order garna sakinxa
-        }
+        if (id == 0) break;
 
         printf("Enter Quantity: ");
         scanf("%d", &qty);
@@ -99,12 +118,10 @@ void placeOrder() {
                     inventory[i].quantity -= qty;
                     float cost = inventory[i].price * qty;
                     totalAmount += cost;
-
-                    strcpy(ordered[orderIndex].name, inventory[i].name);//yesma temporary id item rw price save hunxa so that we can display after
+                    strcpy(ordered[orderIndex].name, inventory[i].name);
                     ordered[orderIndex].qty = qty;
                     ordered[orderIndex].subtotal = cost;
                     orderIndex++;
-
                     printf("Order placed! Subtotal: Rs. %.2f\n", cost);
                 } else {
                     printf("Insufficient stock!\n");
@@ -112,14 +129,12 @@ void placeOrder() {
                 break;
             }
         }
-
-        if (!found) {
-            printf("Item not found.\n");
-        }
+        if (!found) printf("Item not found.\n");
     }
 
-    // Summary
-    printf("\n=========== Final Receipt ===========\n");
+    saveInventoryToFile();
+
+    printf("\n=========== Final Receipt for %s ===========\n", customerName);
     printf("Item\t\tQty\tSubtotal\n");
     printf("-------------------------------------\n");
     for (int i = 0; i < orderIndex; i++) {
@@ -130,13 +145,11 @@ void placeOrder() {
     printf("=====================================\n");
 }
 
-// ==== ADMIN MANAGEMENT FUNCTIONS ====
 void addItem() {
     if (itemCount >= 100) {
         printf("Inventory full!\n");
         return;
     }
-
     struct Item newItem;
     newItem.id = itemCount + 1;
     printf("Enter item name: ");
@@ -150,6 +163,7 @@ void addItem() {
 
     inventory[itemCount++] = newItem;
     printf("Item added successfully!\n");
+    saveInventoryToFile();
 }
 
 void updateItem() {
@@ -173,10 +187,8 @@ void updateItem() {
             break;
         }
     }
-
-    if (!found) {
-        printf("Item not found.\n");
-    }
+    if (!found) printf("Item not found.\n");
+    else saveInventoryToFile();
 }
 
 void deleteItem() {
@@ -195,10 +207,8 @@ void deleteItem() {
             break;
         }
     }
-
-    if (!found) {
-        printf("Item not found.\n");
-    }
+    if (!found) printf("Item not found.\n");
+    else saveInventoryToFile();
 }
 
 void adminMenu() {
@@ -215,40 +225,28 @@ void adminMenu() {
         system("CLS");
 
         switch (choice) {
-            case 1:
-                showInventory();
-                break;
-            case 2:
-                addItem();
-                break;
-            case 3:
-                updateItem();
-                break;
-            case 4:
-                deleteItem();
-                break;
-            case 5:
-                return;
-            default:
-                printf("Invalid choice!\n");
+            case 1: showInventory(); break;
+            case 2: addItem(); break;
+            case 3: updateItem(); break;
+            case 4: deleteItem(); break;
+            case 5: return;
+            default: printf("Invalid choice!\n");
         }
-
         printf("\nPress any key to continue...\n");
         getch();
         system("CLS");
     }
 }
 
-// ==== MAIN ====
 int main() {
     welcome();
     getch();
     system("CLS");
-
     content();
     printf("\nPress any key to continue...\n");
     getch();
     system("CLS");
+    loadInventoryFromFile();
 
     int a;
     struct admin a1;
@@ -267,7 +265,6 @@ int main() {
             getch();
             system("CLS");
         }
-
         else if (a == 2) {
             getchar();
             printf("-----Admin Log in-----\n");
@@ -300,18 +297,16 @@ int main() {
                 system("CLS");
             }
         }
-
         else if (a == 3) {
             printf("Exiting the program. Thank you!\n");
             break;
         }
-
         else {
             printf("Invalid option. Please try again.\n");
             getch();
             system("CLS");
         }
     }
-
     return 0;
 }
+    
